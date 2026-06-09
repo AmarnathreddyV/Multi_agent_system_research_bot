@@ -1,4 +1,5 @@
 import os
+import streamlit as st
 from dotenv import load_dotenv
 # 1. Fixed the import to use LangGraph's prebuilt agent creator
 from langgraph.prebuilt import create_react_agent 
@@ -9,8 +10,18 @@ from tools import web_search, scrape_url
 
 load_dotenv()
 
-# Initialize LLM
-llm = ChatMistralAI(model="mistral-small-2506", temperature=0)
+# Securely retrieve the API key from Streamlit Cloud secrets or local environment variables
+mistral_key = st.secrets.get("MISTRAL_API_KEY") or os.getenv("MISTRAL_API_KEY")
+
+if not mistral_key:
+    raise ValueError("MISTRAL_API_KEY is missing! Please configure it in your Streamlit Secrets box or .env file.")
+
+# Initialize LLM with the verified key
+llm = ChatMistralAI(
+    model="mistral-small-2506", 
+    temperature=0, 
+    api_key=mistral_key
+)
 
 # 2. Updated agent creators to use create_react_agent correctly
 def build_search_agent():
