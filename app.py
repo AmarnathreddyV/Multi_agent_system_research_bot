@@ -24,7 +24,7 @@ topic = st.text_input(
     placeholder="e.g., Key breakthroughs in Solid-State Batteries (2026)"
 )
 
-# Pull secrets safely to pass down into the backend module context
+# Securely extract environmental secrets at runtime from Streamlit Cloud
 mistral_key = st.secrets.get("MISTRAL_API_KEY")
 tavily_key = st.secrets.get("TAVILY_API_KEY")
 
@@ -33,19 +33,18 @@ if st.button("Launch Research Team", type="primary"):
     if not topic.strip():
         st.warning("⚠️ Please provide a valid research topic before running the pipeline!")
     elif not mistral_key or not tavily_key:
-        st.error("❌ Configuration Secret Error: Double check that your Streamlit secrets are saved properly!")
+        st.error("❌ Secrets setup configuration missing from dashboard parameters box.")
     else:
-        # Visual status loader for the backend agent execution
         with st.status("🚀 Agents are working... (This may take a minute)", expanded=True) as status:
             try:
                 st.write("🔍 **Search Agent** is hunting for reliable links...")
-                # Run the pipeline function passing the keys explicitly down
+                
+                # Pass secrets keys directly downstream into your functions
                 results = run_research_pipeline(topic, mistral_key=mistral_key, tavily_key=tavily_key)
                 
                 status.update(label="✅ Research Complete!", state="complete", expanded=False)
                 st.success("🎉 Your report is ready!")
                 
-                # Dynamic Tabbed Interface to view outputs neatly
                 tab1, tab2, tab3 = st.tabs([
                     "📝 Final Report", 
                     "🧐 Critic Feedback", 
