@@ -3,14 +3,17 @@ import requests
 from bs4 import BeautifulSoup
 from tavily import TavilyClient
 import os
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
 def get_web_search_tool(tavily_key: str = None):
+    # Fallback to os.getenv if st.secrets isn't found locally
     key = tavily_key or os.getenv("TAVILY_API_KEY")
     if not key:
-        raise ValueError("TAVILY_API_KEY is missing!")
+        raise ValueError("TAVILY_API_KEY is missing! Please configure it in Secrets.")
+        
     tavily = TavilyClient(api_key=key)
 
     @tool("web_search")
