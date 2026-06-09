@@ -24,17 +24,23 @@ topic = st.text_input(
     placeholder="e.g., Key breakthroughs in Solid-State Batteries (2026)"
 )
 
+# Pull secrets safely to pass down into the backend module context
+mistral_key = st.secrets.get("MISTRAL_API_KEY")
+tavily_key = st.secrets.get("TAVILY_API_KEY")
+
 # Execution Trigger
 if st.button("Launch Research Team", type="primary"):
     if not topic.strip():
         st.warning("⚠️ Please provide a valid research topic before running the pipeline!")
+    elif not mistral_key or not tavily_key:
+        st.error("❌ Configuration Secret Error: Double check that your Streamlit secrets are saved properly!")
     else:
         # Visual status loader for the backend agent execution
         with st.status("🚀 Agents are working... (This may take a minute)", expanded=True) as status:
             try:
                 st.write("🔍 **Search Agent** is hunting for reliable links...")
-                # Run the pipeline function from your pipeline.py
-                results = run_research_pipeline(topic)
+                # Run the pipeline function passing the keys explicitly down
+                results = run_research_pipeline(topic, mistral_key=mistral_key, tavily_key=tavily_key)
                 
                 status.update(label="✅ Research Complete!", state="complete", expanded=False)
                 st.success("🎉 Your report is ready!")
@@ -48,7 +54,6 @@ if st.button("Launch Research Team", type="primary"):
                 
                 with tab1:
                     st.subheader("Generated Research Paper")
-                    # Display the final report nicely formatted in Markdown
                     st.markdown(results.get("report", "No report text generated."))
                     
                 with tab2:
