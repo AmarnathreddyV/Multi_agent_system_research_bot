@@ -1,7 +1,6 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-# 1. Fixed the import to use LangGraph's prebuilt agent creator
 from langgraph.prebuilt import create_react_agent 
 from langchain_mistralai import ChatMistralAI
 from langchain_core.output_parsers import StrOutputParser
@@ -23,7 +22,6 @@ llm = ChatMistralAI(
     api_key=mistral_key
 )
 
-# 2. Updated agent creators to use create_react_agent correctly
 def build_search_agent():
     return create_react_agent(
         model=llm,
