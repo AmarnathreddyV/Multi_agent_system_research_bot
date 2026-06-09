@@ -24,7 +24,6 @@ def web_search(query: str) -> str:
 
     out = []
     for r in results.get('results', []):
-        # FIX: Changed r['URL'] to lowercase r['url']. Tavily keys are strictly lowercase.
         out.append(
             f"Title: {r.get('title', 'N/A')}\nURL: {r.get('url', 'N/A')}\nSnippet: {r.get('content', '')[:300]}\n"
         )
@@ -35,7 +34,6 @@ def web_search(query: str) -> str:
 def scrape_url(url: str) -> str:
     """Scrape and return clean text content from a given URL for deeper reading."""
     try:
-        # FIX: Corrected "Morzilla" typo to "Mozilla"
         resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
         
@@ -43,8 +41,6 @@ def scrape_url(url: str) -> str:
         for tag in soup(["script", "style", "nav", "footer"]):
             tag.decompose()
             
-        # FIX: Corrected the typo 'separayor' to 'separator'
         return soup.get_text(separator=" ", strip=True)[:3000]
     except Exception as e:
-        # FIX: Corrected "scrap" to "scrape"
         return f"Could not scrape the URL: {str(e)}"
