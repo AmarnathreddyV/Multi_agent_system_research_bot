@@ -1,50 +1,157 @@
+import os
+
+import requests
+
+from bs4 import BeautifulSoup
+
+from tavily import TavilyClient
+
+from dotenv import load_dotenv
 
 from langchain.tools import tool
-import requests
-from bs4 import BeautifulSoup
-from tavily import TavilyClient
-import os
-import streamlit as st
-from dotenv import load_dotenv
+
 
 load_dotenv()
 
-def get_web_search_tool(tavily_key: str = None):
-    # Fallback to os.getenv if st.secrets isn't found locally
-    key = tavily_key or os.getenv("TAVILY_API_KEY")
+
+# ==================================================
+# WEB SEARCH TOOL
+# ==================================================
+
+def get_web_search_tool(
+    tavily_key: str = None
+):
+
+    key = (
+        tavily_key
+        or os.getenv("TAVILY_API_KEY")
+    )
+
     if not key:
-        raise ValueError("TAVILY_API_KEY is missing! Please configure it in Secrets.")
-        
-    tavily = TavilyClient(api_key=key)
+
+        raise ValueError(
+            "TAVILY_API_KEY is missing! "
+            "Please configure it in Streamlit Secrets."
+        )
+
+
+    tavily = TavilyClient(
+        api_key=key
+    )
+
 
     @tool("web_search")
     def web_search(query: str) -> str:
-        """Search the web for recent and reliable info on a topic. Returns titles, urls and snippets."""
-        results = tavily.search(query=query, max_results=5)
-        out = []
-        for r in results.get('results', []):
-            out.append(
-                f"Title: {r.get('title', 'N/A')}\nURL: {r.get('url', 'N/A')}\nSnippet: {r.get('content', '')[:300]}\n"
+        """
+        Search the web for recent and reliable
+        information about a topic.
+
+        Returns titles, URLs and snippets.
+        """
+
+        results = tavily.search(
+            query=query,
+            max_results=5
+        )
+
+
+        output = []
+
+
+        for result in results.get(
+            "results",
+            []
+        ):
+
+            output.append(
+                f"Title: {result.get('title', 'N/A')}\n"
+                f"URL: {result.get('url', 'N/A')}\n"
+                f"Snippet: {result.get('content', '')[:500]}\n"
             )
-        return "\n-----\n".join(out)
-        
+
+
+        if not output:
+
+            return "No search results found."
+
+
+        return "\n-----\n".join(
+            output
+        )
+
+
     return web_search
 
+
+# ==================================================
+# URL SCRAPER TOOL
+# ==================================================
+
 def get_scrape_url_tool():
+
+
     @tool("scrape_url")
     def scrape_url(url: str) -> str:
-        """Scrape and return clean text content from a given URL for deeper reading."""
-        try:
-            resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            resp.raise_for_status()
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            for tag in soup(["script", "style", "nav", "footer"]):
-                tag.decompose()
-                
-            return soup.get_text(separator=" ", strip=True)[:3000]
-        except Exception as e:
-            return f"Could not scrape the URL: {str(e)}"
-            
-    return scrape_url
+        """
+        Scrape a web page and return clean text
+        content for deeper research.
+        """
 
+        try:
+
+            response = requests.get(
+                url,
+                timeout=10,
+                headers={
+                    "User-Agent":
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/120.0 Safari/537.36"
+                }
+            )
+
+
+            response.raise_for_status()
+
+
+            soup = BeautifulSoup(
+                response.text,
+                "html.parser"
+            )
+
+
+            # Remove unnecessary HTML elements
+            for tag in soup(
+                [
+                    "script",
+                    "style",
+                    "nav",
+                    "footer",
+                    "header",
+                    "noscript"
+                ]
+            ):
+
+                tag.decompose()
+
+
+            text = soup.get_text(
+                separator=" ",
+                strip=True
+            )
+
+
+            # Limit content sent to the LLM
+            return text[:5000]
+
+
+        except Exception as e:
+
+            return (
+                f"Could not scrape the URL: {str(e)}"
+            )
+
+
+    return scrape_url
