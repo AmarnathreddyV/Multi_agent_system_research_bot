@@ -1,3 +1,4 @@
+```python
 from langchain.tools import tool
 import requests
 from bs4 import BeautifulSoup
@@ -46,3 +47,4 @@ def get_scrape_url_tool():
             return f"Could not scrape the URL: {str(e)}"
             
     return scrape_url
+```
