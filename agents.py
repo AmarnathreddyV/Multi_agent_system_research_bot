@@ -1,117 +1,227 @@
-from agents import (
-    build_reader_agent,
-    build_search_agent,
-    get_writer_chain,
-    get_critic_chain,
+import os
+
+from dotenv import load_dotenv
+
+from langgraph.prebuilt import create_react_agent
+
+from langchain_mistralai import ChatMistralAI
+
+from langchain_core.output_parsers import StrOutputParser
+
+from langchain_core.prompts import ChatPromptTemplate
+
+from tools import (
+    get_web_search_tool,
+    get_scrape_url_tool
 )
 
 
-def run_research_pipeline(
-    topic: str,
+load_dotenv()
+
+
+# -----------------------------
+# Mistral LLM
+# -----------------------------
+def get_llm(mistral_key: str = None):
+
+    key = (
+        mistral_key
+        or os.getenv("MISTRAL_API_KEY")
+    )
+
+    if not key:
+
+        raise ValueError(
+            "MISTRAL_API_KEY is missing! "
+            "Please configure it in Streamlit Secrets."
+        )
+
+    return ChatMistralAI(
+        model="mistral-small-2506",
+        temperature=0,
+        api_key=key
+    )
+
+
+# -----------------------------
+# Search Agent
+# -----------------------------
+def build_search_agent(
     mistral_key: str = None,
     tavily_key: str = None
-) -> dict:
+):
 
-    state = {}
+    llm = get_llm(mistral_key)
 
-    # -----------------------------
-    # 1. Search Agent
-    # -----------------------------
-    search_agent = build_search_agent(
-        mistral_key=mistral_key,
-        tavily_key=tavily_key
+    search_tool = get_web_search_tool(
+        tavily_key
     )
 
-    search_result = search_agent.invoke({
-        "messages": [
-            (
-                "user",
-                f"Find recent, reliable and detailed information about: {topic}"
-            )
-        ]
-    })
-
-    state["search_results"] = search_result["messages"][-1].content
-
-
-    # -----------------------------
-    # 2. Reader / Scraper Agent
-    # -----------------------------
-    reader_agent = build_reader_agent(
-        mistral_key=mistral_key
+    return create_react_agent(
+        model=llm,
+        tools=[search_tool]
     )
 
-    reader_result = reader_agent.invoke({
-        "messages": [
-            (
-                "user",
-                f"""
-Based on the following search results about '{topic}',
-identify the most relevant URL and scrape it for deeper information.
 
-Search results:
+# -----------------------------
+# Reader / Scraper Agent
+# -----------------------------
+def build_reader_agent(
+    mistral_key: str = None
+):
 
-{state["search_results"][:800]}
+    llm = get_llm(
+        mistral_key
+    )
+
+    scrape_tool = get_scrape_url_tool()
+
+    return create_react_agent(
+        model=llm,
+        tools=[scrape_tool]
+    )
+
+
+# ==================================================
+# WRITER AGENT
+# ==================================================
+
+writer_prompt = ChatPromptTemplate.from_messages(
+    [
+
+        (
+            "system",
+            """
+You are an expert research writer.
+
+Your job is to create clear, structured,
+factual and insightful research reports.
+
+Use only the information provided in
+the research gathered by the agents.
+
+Do not invent facts.
 """
-            )
-        ]
-    })
+        ),
 
-    state["scraped_content"] = reader_result["messages"][-1].content
+        (
+            "human",
+            """
+Write a detailed research report on the topic below.
+
+Topic:
+{topic}
+
+Research Gathered:
+{research}
 
 
-    # -----------------------------
-    # 3. Combine Research
-    # -----------------------------
-    research_combined = (
-        f"SEARCH RESULTS:\n"
-        f"{state['search_results']}\n\n"
-        f"DETAILED SCRAPED CONTENT:\n"
-        f"{state['scraped_content']}"
+Structure the report as:
+
+1. Introduction
+
+2. Key Findings
+   - Explain at least 3 important findings
+   - Provide clear explanations
+
+3. Conclusion
+
+4. Sources
+   - List relevant URLs found in the research
+
+
+Requirements:
+
+- Be factual.
+- Be professional.
+- Be easy to understand.
+- Do not invent information.
+- Use the research provided.
+- Clearly explain the important findings.
+"""
+        )
+
+    ]
+)
+
+
+def get_writer_chain(
+    mistral_key: str = None
+):
+
+    return (
+        writer_prompt
+        | get_llm(mistral_key)
+        | StrOutputParser()
     )
 
 
-    # -----------------------------
-    # 4. Writer Agent
-    # -----------------------------
-    writer_chain = get_writer_chain(
-        mistral_key=mistral_key
+# ==================================================
+# CRITIC AGENT
+# ==================================================
+
+critic_prompt = ChatPromptTemplate.from_messages(
+    [
+
+        (
+            "system",
+            """
+You are a sharp and constructive research critic.
+
+Evaluate the report honestly and objectively.
+
+Identify both strengths and weaknesses.
+"""
+        ),
+
+        (
+            "human",
+            """
+Review the research report below.
+
+Report:
+{report}
+
+
+Respond in exactly this format:
+
+Score: X/10
+
+Strengths:
+- ...
+- ...
+- ...
+
+Areas to Improve:
+- ...
+- ...
+- ...
+
+One line verdict:
+...
+
+
+Evaluate the report based on:
+
+- Accuracy
+- Clarity
+- Completeness
+- Organization
+- Quality of sources
+- Missing or weak information
+"""
+        )
+
+    ]
+)
+
+
+def get_critic_chain(
+    mistral_key: str = None
+):
+
+    return (
+        critic_prompt
+        | get_llm(mistral_key)
+        | StrOutputParser()
     )
-
-    state["report"] = writer_chain.invoke({
-        "topic": topic,
-        "research": research_combined
-    })
-
-
-    # -----------------------------
-    # 5. Critic Agent
-    # -----------------------------
-    critic_chain = get_critic_chain(
-        mistral_key=mistral_key
-    )
-
-    state["feedback"] = critic_chain.invoke({
-        "report": state["report"]
-    })
-
-
-    return state
-
-
-# -----------------------------
-# Local Testing
-# -----------------------------
-if __name__ == "__main__":
-
-    topic = input(
-        "\nEnter a research topic: "
-    )
-
-    result = run_research_pipeline(topic)
-
-    print("\n===== RESEARCH REPORT =====\n")
-    print(result["report"])
-
-    print("\n===== CRITIC FEEDBACK =====\n")
-    print(result["feedback"])
