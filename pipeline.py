@@ -1,4 +1,4 @@
-```python
+
 from agents import build_reader_agent, build_search_agent, get_writer_chain, get_critic_chain
 
 def run_research_pipeline(topic: str, mistral_key: str = None, tavily_key: str = None) -> dict:
@@ -46,4 +46,4 @@ if __name__ == "__main__":
     import os
     topic = input("\n Enter a research topic: ")
     run_research_pipeline(topic)
-```
+
