@@ -1,4 +1,3 @@
-```python
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -78,4 +77,3 @@ One line verdict:
 
 def get_critic_chain(mistral_key: str = None):
     return critic_prompt | get_llm(mistral_key) | StrOutputParser()
-```
