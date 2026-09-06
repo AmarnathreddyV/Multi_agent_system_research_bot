@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import sys
 from pipeline import run_research_pipeline
@@ -109,4 +108,4 @@ if st.button("Launch Research Team", type="primary"):
                 st.error(
                     f"An error occurred while executing the multi-agent system: {e}"
                 )
-```
+
