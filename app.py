@@ -67,14 +67,12 @@ if st.button("Launch Research Team", type="primary"):
 
                 st.success("🎉 Your report is ready!")
 
-                # Result Tabs
                 tab1, tab2, tab3 = st.tabs([
                     "📝 Final Report",
                     "🧐 Critic Feedback",
                     "🗂️ Collected Raw Data"
                 ])
 
-                # Final Report
                 with tab1:
                     st.subheader("Generated Research Paper")
 
@@ -85,7 +83,6 @@ if st.button("Launch Research Team", type="primary"):
                         )
                     )
 
-                # Critic Feedback
                 with tab2:
                     st.subheader("Critic Evaluation")
 
@@ -96,7 +93,6 @@ if st.button("Launch Research Team", type="primary"):
                         )
                     )
 
-                # Raw Data
                 with tab3:
                     st.subheader("Agent Grounding Data")
 
